@@ -1,0 +1,280 @@
+:root {
+  /* Apple Design Colors */
+  --apple-blue: #0071e3;
+  --apple-bg: #f5f5f7;
+  --apple-font: -apple-system, BlinkMacSystemFont, "San Francisco", "Helvetica Neue", sans-serif;
+
+  /* Element Plus Overrides */
+  --el-color-primary: var(--apple-blue);
+  --el-border-radius-base: 12px;
+  --el-border-radius-small: 8px;
+  --el-border-radius-round: 20px;
+  --el-box-shadow-light: 0 8px 30px rgba(0, 0, 0, 0.04);
+  --el-box-shadow-lighter: 0 4px 12px rgba(0, 0, 0, 0.02);
+  
+  /* Button Overrides for Primary Color variants */
+  --el-color-primary-light-3: #338df5;
+  --el-color-primary-light-5: #66a9f8;
+  --el-color-primary-light-7: #99c5fa;
+  --el-color-primary-light-8: #b3d3fb;
+  --el-color-primary-light-9: #e6f1fe;
+  --el-color-primary-dark-2: #005bb6;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--apple-font);
+  background-color: var(--apple-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #1d1d1f;
+}
+
+/* Scrollbar Styling (macOS style) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0);
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Card Styling to match Apple style */
+.el-card {
+  border: none !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06) !important;
+  border-radius: 20px !important;
+  background-color: #ffffff !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.el-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
+}
+
+.el-card__header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  padding: 20px 24px !important;
+  font-weight: 600;
+  font-size: 17px;
+  color: #1d1d1f;
+}
+
+/* Table Styling */
+.el-table {
+  --el-table-header-bg-color: transparent;
+  --el-table-row-hover-bg-color: #f5f9ff;
+  --el-table-border-color: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: transparent !important;
+}
+
+/* Remove vertical borders */
+.el-table--border .el-table__inner-wrapper::after,
+.el-table--border::after,
+.el-table--border::before,
+.el-table__inner-wrapper::before {
+  display: none !important;
+}
+
+.el-table--border .el-table__cell {
+  border-right: none !important;
+}
+
+.el-table th.el-table__cell {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  font-weight: 600;
+  font-size: 12px;
+  color: #86868b;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.el-table td.el-table__cell {
+  padding: 16px 0;
+  color: #1d1d1f;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.el-table tr {
+  background-color: transparent !important;
+}
+
+/* 固定列背景色 - 必须覆盖透明背景 */
+.el-table td.el-table-fixed-column--right,
+.el-table td.el-table-fixed-column--left,
+.el-table th.el-table-fixed-column--right,
+.el-table th.el-table-fixed-column--left {
+  background-color: #fff !important;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table-fixed-column--right,
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table-fixed-column--left {
+  background-color: #fafafa !important;
+}
+
+.el-table__body tr:hover td.el-table-fixed-column--right,
+.el-table__body tr:hover td.el-table-fixed-column--left {
+  background-color: var(--el-table-row-hover-bg-color) !important;
+}
+
+/* Image/Cover Styling */
+.el-table .el-image,
+.book-cover {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: block;
+}
+
+/* Button Styling */
+.el-button {
+  font-weight: 500;
+  border-radius: 999px !important; /* Capsule shape */
+  padding: 10px 22px;
+  height: auto;
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  border: 1px solid transparent;
+}
+
+.el-button:not(.is-circle):not(.is-disabled):hover {
+  transform: translateY(-1px);
+}
+
+.el-button--primary {
+  background: linear-gradient(180deg, #0077ed 0%, #0071e3 100%);
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background: linear-gradient(180deg, #1485ff 0%, #0077ed 100%);
+  box-shadow: 0 4px 8px rgba(0, 113, 227, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: none;
+}
+
+.el-button--primary.is-disabled,
+.el-button--primary.is-disabled:hover,
+.el-button--primary.is-disabled:focus,
+.el-button--primary.is-disabled:active {
+  background-color: var(--apple-blue);
+  background-image: none;
+  border-color: transparent;
+  opacity: 0.4;
+  color: white;
+  box-shadow: none;
+}
+
+/* Input Styling */
+.el-input__wrapper {
+  box-shadow: none !important;
+  background-color: #f5f5f7 !important;
+  border-radius: 10px !important;
+  padding: 4px 12px;
+  transition: all 0.2s ease;
+}
+
+.el-input__wrapper:hover {
+  background-color: #e8e8ed !important;
+}
+
+.el-input__wrapper.is-focus {
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15) !important; /* Focus Ring */
+}
+
+.el-input__inner {
+  color: #1d1d1f;
+  font-size: 14px;
+  height: 36px;
+}
+
+/* Tag Styling */
+.el-tag {
+  border: none !important;
+  border-radius: 6px;
+  font-weight: 600;
+  padding: 0 10px;
+  height: 24px;
+  line-height: 24px;
+}
+
+.el-tag--primary, .el-tag--blue {
+  background-color: rgba(0, 113, 227, 0.1);
+  color: #0071e3;
+}
+
+.el-tag--success {
+  background-color: rgba(52, 199, 89, 0.15);
+  color: #248a3d;
+}
+
+.el-tag--warning {
+  background-color: rgba(255, 149, 0, 0.15);
+  color: #bd6f00;
+}
+
+.el-tag--danger {
+  background-color: rgba(255, 59, 48, 0.15);
+  color: #d70015;
+}
+
+.el-tag--info {
+  background-color: rgba(142, 142, 147, 0.15);
+  color: #636366;
+}
+
+/* Menu Styling */
+.el-menu {
+  border-right: none !important;
+  background-color: transparent !important;
+}
+
+.el-menu-item {
+  border-radius: 12px;
+  margin: 4px 8px;
+  height: 44px;
+  line-height: 44px;
+}
+
+.el-menu-item.is-active {
+  background-color: rgba(0, 113, 227, 0.1) !important;
+  color: var(--apple-blue) !important;
+  font-weight: 600;
+}
+
+.el-aside {
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.el-header {
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Tag Styling */
+.el-tag {
+  border-radius: 6px;
+  border: none;
+  font-weight: 500;
+}
