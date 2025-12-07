@@ -1,20 +1,86 @@
 # 图书借阅系统
 
-**更新日期：12/3**
+**更新日期：2025-12-08**
 
-根据12.3readme文档，更新前端，下一步
+## 项目状态
 
-测试整个系统功能，修改api替换mock数据
+✅ **前端重构完成** - 所有接口已对齐最新 RESTful API 文档  
+✅ **代码质量检查通过** - ESLint 静态检查无错误  
+✅ **构建验证通过** - TypeScript 编译成功，生产构建正常  
+🚀 **准备联调** - 可与后端进行集成测试
+
+## 技术栈
+
+- **框架**: Vue 3 (Composition API) + TypeScript
+- **状态管理**: Pinia
+- **路由**: Vue Router 4
+- **UI 组件**: Element Plus
+- **HTTP 客户端**: Axios
+- **构建工具**: Vite
+- **代码规范**: ESLint + TypeScript
+
+## 项目说明
+
+本项目前端已完全对齐 `接口文档.md` 中定义的 RESTful API 规范：
+
+1. **统一响应格式**: `{code: "0", message: string|null, data: T, success: boolean}`
+2. **RESTful 风格**: 使用标准 HTTP 方法和路径参数 (GET /books/{id})
+3. **驼峰命名**: 所有字段统一使用 camelCase (bookId, borrowTime, createAt)
+4. **分页规范**: 请求使用 {pageNum, pageSize}，响应返回 {list, total, pageNum, pageSize, pages}
+5. **严格类型**: TypeScript 类型定义完整，无 any 类型
+
+## 重要更新 (2025-12-08)
+
+### API 接口全面升级为 RESTful 风格
+
+前端代码已完全重构，对齐最新《接口文档.md》RESTful v1.0 规范：
+
+**主要变更**:
+
+1. **统一响应格式**
+   - 旧格式: `{status, message, data}`
+   - 新格式: `{code, message, data, success}`
+   - 成功判断: `code === "0" && success === true`
+
+2. **图书模块 RESTful 化**
+   - 旧: `POST /book/detail` → 新: `GET /books/{id}`
+   - 旧: `POST /book/books` → 新: `GET /books?pageNum=1&pageSize=10`
+   - 旧: `POST /book/create` → 新: `POST /books`
+   - 旧: `PUT /book/update` → 新: `PUT /books/{id}`
+   - 旧: `DELETE /book/delete` → 新: `DELETE /books/{id}`
+
+3. **借阅/预约/收藏模块**
+   - 旧: 返回分页数据 → 新: 直接返回数组
+   - 路径统一: `/borrow`, `/reservation`, `/favorites`
+
+4. **统计分析模块**
+   - 旧: `POST /analytics/*` → 新: `GET /statistics/*`
+   - 支持 `limit` 参数自定义返回数量
+   - 移除推荐功能(接口文档未定义)
+
+5. **字段命名规范**
+   - 全部采用 camelCase: `bookId`, `borrowTime`, `createAt`
+   - 注意: 注册时间字段为 `createAt` (不是 `createdAt`)
+
+6. **分页参数变更**
+   - 旧: `{limit, offset}` → 新: `{pageNum, pageSize}`
+   - 响应结构: `{list, total, pageNum, pageSize, pages}`
+
+**移除的功能** (接口文档不支持):
+- ❌ 图书搜索的 ISBN 和 tag 筛选
+- ❌ 图书表单的 publish_year, total, stock, cover_url, tag_ids
+- ❌ 图书推荐功能
 
 ## 1.项目设计
 
 **本项目旨在构建一个面向用户的图书借阅管理系统，实现如下功能：**
 
-1. **图书信息管理**
-2. **用户借阅与归还**
-3. **图书预约排队**
-4. **评论互动**
-5. **用户图书收藏夹**
+1. **图书信息管理** - 图书 CRUD，搜索按书名/作者
+2. **用户借阅与归还** - 借书、还书、借阅记录查询
+3. **图书预约排队** - 预约、取消预约、预约列表
+4. **评论互动** - 图书评论发表、查看、删除
+5. **用户图书收藏夹** - 添加收藏、移除收藏、收藏列表
+6. **统计分析** - 热门图书、阅读之星、最新动态
 
 ## 2.数据库设计
 
@@ -169,67 +235,125 @@
 
 ### 3.1 用户模块
 
-#### 3.1.1 用户登录
+**说明**: 所有接口已更新为最新 RESTful 风格，统一响应格式为 `{code, message, data, success}`
+
+#### 3.1.1 用户注册
 
 ```
-POST /api/auth/login
+POST /auth/register
 ```
 
 ##### 请求参数
 
+| 参数     | 类型   | 必填 | 说明                                 |
+| -------- | ------ | ---- | ------------------------------------ |
+| username | string | 是   | 用户名，长度 4-50 字符              |
+| password | string | 是   | 密码，长度 6-20 字符                |
+| name     | string | 是   | 姓名                                 |
+| phone    | string | 是   | 手机号                               |
+| role     | string | 否   | 角色 (student/admin)，不传默认 student |
 
-| **参数**     | **类型**   | **必填** | **说明**            |
-| ------------ | ---------- | -------- | ------------------- |
-| **username** | **string** | **是**   | **用户登录名**      |
-| **password** | **string** | **是**   | **用户密码（明文)** |
+##### 返回示例
 
-##### 返回数据
+```json
+{
+    "code": "0",
+    "message": null,
+    "data": null,
+    "success": true
+}
+```
+
+#### 3.1.2 用户登录
 
 ```
+POST /auth/login
+```
+
+##### 请求参数
+
+| 参数     | 类型   | 必填 | 说明   |
+| -------- | ------ | ---- | ------ |
+| username | string | 是   | 用户名 |
+| password | string | 是   | 密码   |
+
+##### 返回示例
+
+```json
 {
-    "status": "ok",
-    "message": "login success",
+    "code": "0",
+    "message": null,
     "data": {
-        "token": "xxx"
-    }
+        "token": "eyJhbGciOiJIUzM4NCJ9...",
+        "id": 1,
+        "username": "chaos",
+        "name": "吕建超",
+        "role": "admin"
+    },
+    "success": true
 }
 ```
 
-#### 3.1.2 用户注册
+#### 3.1.3 获取当前用户信息
 
 ```
-POST /api/auth/register
+GET /auth/me
+```
+
+需要 Authorization 请求头
+
+##### 返回示例
+
+```json
+{
+    "code": "0",
+    "message": null,
+    "data": {
+        "id": 1,
+        "username": "chaos",
+        "role": "admin",
+        "name": "吕建超",
+        "phone": "15827110898",
+        "createAt": "2025-12-04 15:33:12"
+    },
+    "success": true
+}
+```
+
+#### 3.1.4 修改用户信息
+
+```
+PUT /auth/me
 ```
 
 ##### 请求参数
 
-**理论上 role 不应该由前端指定，这里为了作业简单先保留。**
+| 参数  | 类型   | 必填 | 说明   |
+| ----- | ------ | ---- | ------ |
+| name  | string | 是   | 姓名   |
+| phone | string | 是   | 手机号 |
 
-
-| **参数**     | **类型**   | **必填** | **说明**     |
-| ------------ | ---------- | -------- | ------------ |
-| **username** | **string** | **是**   | **用户名**   |
-| **password** | **string** | **是**   | **密码**     |
-| **name**     | **string** | **是**   | **姓名**     |
-| **phone**    | **string** | **是**   | **联系电话** |
-| **role**     | **string** | **是**   | **角色**     |
-
-##### 返回数据
+#### 3.1.5 修改密码
 
 ```
-{
-    "status": "ok",
-    "message": "register success",
-    "data": null
-}
+PUT /auth/password
 ```
+
+##### 请求参数
+
+| 参数        | 类型   | 必填 | 说明       |
+| ----------- | ------ | ---- | ---------- |
+| oldPassword | string | 是   | 旧密码     |
+| newPassword | string | 是   | 新密码 6-20字符 |
 
 ### 3.2 图书管理
 
-#### 3.2.1 创建图书（teacher/admin）
+**重要**: 图书模块已全面重构为 RESTful 风格
+
+#### 3.2.1 获取图书列表
 
 ```
-POST /api/book/create
+GET /books
 ```
 
 ##### 请求参数
@@ -731,147 +855,109 @@ post /api/tags
 
 ## 4. 拓展功能
 
-### 4.1 统计借阅数量最多的 10 本书籍
+### 4.1 热门图书排行
 
-**通过在借阅表 **`borrow` 中统计各图书的借阅次数，按次数从高到低排序，取前 10 条记录，前端通过表格进行展示。
-
-```
-POST /api/analytics/top-borrowed
-```
-
-#### 请求参数
-
-无
-
-#### 返回数据
+**接口已更新**: 使用 GET 方式，支持 limit 参数
 
 ```
+GET /statistics/top-borrowed-books?limit=10
+```
+
+#### Query 参数
+
+| 参数  | 类型 | 必填 | 默认值 | 说明             |
+| ----- | ---- | ---- | ------ | ---------------- |
+| limit | int  | 否   | 5      | 返回的图书数量   |
+
+#### 返回示例 (最新格式)
+
+```json
 {
-    "status": "ok",
-    "message": "success",
-    "data": {
-        "result": [
-            {
-                "id": 1,
-                "title": "计算机科学导论",
-                "author": "张三",
-                "borrow_count": 25
-            },
-            {
-                "id": 2,
-                "title": "人工智能简史",
-                "author": "李四",
-                "borrow_count": 18
-            },
-            ...
-        ],
-        "total": 10
-    }
+    "code": "0",
+    "message": null,
+    "data": [
+        {
+            "bookId": 1,
+            "title": "Java编程思想",
+            "author": "Bruce Eckel",
+            "borrowCount": 50
+        }
+    ],
+    "success": true
 }
 ```
 
-**说明：**
+**前端实现**: HomeView 中的"热门图书"面板
 
-* `borrow_count`：该图书被借阅的总次数（可统计 borrow 表中该 book\_id 的记录数）
-* `total`：本次返回的图书数量，一般等于10（不足时为实际数量）
-
-### 4.2 统计借阅数量最多的 5 名用户
-
-**在借阅表 **`borrow` 中按用户统计借阅次数，找出借阅次数最多的5名用户。
+### 4.2 阅读之星排行
 
 ```
-POST /api/analytics/top-borrowers
+GET /statistics/top-borrowers?limit=10
 ```
 
-#### 请求参数
+#### Query 参数
 
-**无**
+| 参数  | 类型 | 必填 | 默认值 | 说明             |
+| ----- | ---- | ---- | ------ | ---------------- |
+| limit | int  | 否   | 5      | 返回的用户数量   |
 
-#### 返回数据
+#### 返回示例
 
-```
+```json
 {
-    "status": "ok",
-    "message": "success",
-    "data": {
-        "result": [
-            {
-                "id": 5,
-                "name": "李四",
-                "borrow_count": 42
-            },
-            {
-                "id": 8,
-                "name": "王五",
-                "borrow_count": 30
-            },
-            ...
-        ],
-        "total": 5
-    }
+    "code": "0",
+    "message": null,
+    "data": [
+        {
+            "userId": 1,
+            "username": "chaos",
+            "borrowCount": 20
+        }
+    ],
+    "success": true
 }
 ```
 
-**说明：**
+**前端实现**: HomeView 中的"阅读之星"面板
 
-* `borrow_count`：该用户的总借阅次数
-* `total`：本次返回的用户数量，一般等于5（不足时为实际数量）
-
-### 4.3 推荐5本图书
-
-**根据当前登录用户最近一次借阅记录的图书，找到该图书的标签（通过 **`book_tag` 和 `tag` 表），然后从图书表中选取若干本拥有相同标签的图书作为推荐结果。
+### 4.3 最新动态
 
 ```
-POST /api/analytics/recommend
+GET /statistics/recent-activities?limit=20
 ```
 
-#### 请求参数
+#### Query 参数
 
-**无**
+| 参数  | 类型 | 必填 | 默认值 | 说明             |
+| ----- | ---- | ---- | ------ | ---------------- |
+| limit | int  | 否   | 10     | 返回的动态数量   |
 
-#### 返回数据
+#### 返回示例
 
-```
+```json
 {
-    "status": "ok",
-    "message": "success",
-    "data": {
-        "result": [
-            {
-                "id": 3,
-                "title": "操作系统原理",
-                "author": "赵六",
-                "description": "介绍现代操作系统设计与实现。",
-                "isbn": "978-7-123-11111-1",
-                "publish_year": 2019,
-                "cover_url": "...",
-                "total": 50,
-                "stock": 20
-            },
-            {
-                "id": 7,
-                "title": "计算机网络",
-                "author": "钱七",
-                "description": "系统讲解计算机网络基础知识。",
-                "isbn": "978-7-123-22222-2",
-                "publish_year": 2018,
-                "cover_url": "...",
-                "total": 80,
-                "stock": 35
-            },
-            ...
-        ],
-        "total": 5
-    }
+    "code": "0",
+    "message": null,
+    "data": [
+        {
+            "id": 1,
+            "userId": 1,
+            "username": "chaos",
+            "bookId": 1,
+            "bookTitle": "Java编程思想",
+            "borrowTime": "2025-12-01 10:30:00"
+        }
+    ],
+    "success": true
 }
 ```
 
-**说明：**
+**前端实现**: HomeView 中的"最新动态"面板，显示格式为 "用户XXX 借阅了 《图书名》"
 
-1. **根据当前用户，查找其在 **`borrow` 表中的最近一条借阅记录；
-2. **根据该记录中的 **`book_id` 在 `book_tag` 表中查找关联的标签；
-3. **在 **`book_tag` + `book` 表中查找拥有相同标签的其他图书；
-4. **选取5本返回给前端，不足就返回实际数量。**
+**注意**: 
+1. 统计模块已移除推荐功能(接口文档未定义)
+2. 所有统计接口已改为 GET 请求
+3. 接口路径从 `/analytics/*` 更新为 `/statistics/*`
 
 ## 5. 前端概述
 
@@ -892,16 +978,91 @@ POST /api/analytics/recommend
 
 **登录注册页面可以加一个 **`isRegister` 变量来判断是登录还是注册，通过按钮进行表单切换。系统首页涉及拓展功能。
 
-## 补充
+## 前端实现说明
 
-**前端**
+### API 对齐完成度
 
-- GET /api/auth/userinfo
+所有接口已完全对齐 `接口文档.md` (RESTful v1.0):
 
-  - 请求参数：无（仅需请求头 token）。
-- POST /api/auth/change-password
+✅ **用户模块** - 登录、注册、获取信息、修改密码  
+✅ **图书模块** - CRUD 操作，使用 RESTful 路径参数  
+✅ **借阅模块** - 借书、还书、借阅列表  
+✅ **预约模块** - 预约、取消、预约列表  
+✅ **收藏模块** - 添加、移除、收藏列表  
+✅ **评论模块** - 发表、删除、查询评论  
+✅ **统计模块** - 热门图书、阅读之星、最新动态
 
-  - Body: { old_password: string; new_password: string }.（入参 { old_password, new_password }，响应 ApiResponse<null>。）
-- GET /api/book/tags
+### 字段对齐说明
 
-  - 请求参数：无（返回全部标签列表，响应 ApiResponse<Tag[]>，字段 { id, name, created_at }。前端用于筛选和新增/编辑图书时选择标签。）
+**已移除字段** (接口文档不支持):
+- 图书搜索: `isbn`, `tag` 字段
+- 图书表单: `publish_year`, `total`, `stock`, `cover_url`, `tag_ids`
+
+**时间字段**: 统一使用 `createAt` (注意不是 `createdAt`)
+
+**分页规范**: 
+- 请求: `{pageNum, pageSize}`
+- 响应: `{list, total, pageNum, pageSize, pages}`
+
+### 响应验证标准
+
+所有 API 调用统一使用:
+```typescript
+if (res.code === '0' && res.success) {
+  // 成功处理
+} else {
+  // 错误处理，使用 res.message
+}
+```
+
+### 路由结构
+
+```
+/                     <- 重定向至 /login 或 /library
+/login                <- 登录/注册页面
+
+/library              <- 主布局 (MainLayout)
+├── /library/home             <- 系统首页 (统计面板)
+├── /library/book             <- 图书管理
+├── /library/borrow           <- 借阅记录
+├── /library/appointment      <- 预约记录
+├── /library/favorite         <- 我的收藏
+└── /library/personal         <- 个人信息
+```
+
+## 开发指南
+
+### 启动项目
+
+```bash
+# 安装依赖
+npm install
+
+# 开发模式
+npm run dev
+
+# 代码检查
+npm run lint
+
+# 生产构建
+npm run build
+```
+
+### 环境配置
+
+修改 `src/utils/request.ts` 中的 `baseURL`:
+
+```typescript
+const service = axios.create({
+  baseURL: 'http://localhost:8080/api',  // 修改为实际后端地址
+  timeout: 10000
+})
+```
+
+### 联调注意事项
+
+1. **认证**: 所有需要登录的接口自动在请求头添加 `Authorization: Bearer {token}`
+2. **错误处理**: 401 自动跳转登录，403 显示无权限提示
+3. **响应格式**: 后端必须严格遵循 `{code, message, data, success}` 格式
+4. **时间格式**: 建议使用 `YYYY-MM-DD HH:mm:ss` 格式
+5. **CORS**: 后端需要配置跨域支持
