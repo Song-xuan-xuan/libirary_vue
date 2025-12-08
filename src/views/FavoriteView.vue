@@ -14,7 +14,20 @@
       </template>
 
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column prop="bookTitle" label="书名" min-width="200" show-overflow-tooltip />
+        <el-table-column label="封面" width="80" align="center">
+          <template #default="scope">
+            <el-image 
+              v-if="scope.row.bookCover" 
+              :src="scope.row.bookCover" 
+              fit="cover" 
+              style="width: 50px; height: 70px; border-radius: 4px;"
+              :preview-src-list="[scope.row.bookCover]"
+            />
+            <span v-else style="color: #ccc;">无</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="bookTitle" label="书名" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="bookAuthor" label="作者" width="120" align="center" show-overflow-tooltip />
         <el-table-column prop="createTime" label="收藏时间" width="180" align="center" />
         <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="scope">

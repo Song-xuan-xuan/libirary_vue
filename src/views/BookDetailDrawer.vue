@@ -28,9 +28,30 @@
               <p class="meta" v-if="bookData.publishYear">出版年份：{{ bookData.publishYear }}</p>
               <div class="stock-info" v-if="bookData.total !== undefined">
                 <el-tag type="info">总数: {{ bookData.total }}</el-tag>
-                <el-tag :type="(bookData.stock || 0) > 0 ? 'success' : 'danger'" style="margin-left: 10px;">
-                  库存: {{ bookData.stock || 0 }}
+                <el-tag :type="getStockType()" style="margin-left: 10px;">
+                  库存: {{ getStock() }}
                 </el-tag>
+              </div>
+              
+              <!-- 操作按钮 -->
+              <div class="action-buttons">
+                <el-button 
+                  v-if="getStock() > 0"
+                  type="primary" 
+                  @click="handleBorrow"
+                  :icon="Reading"
+                >
+                  立即借阅
+                </el-button>
+                <el-button 
+                  v-else
+                  type="warning" 
+                  @click="handleReserve"
+                  :icon="Clock"
+                >
+                  预约图书
+                </el-button>
+                <el-button @click="handleFavorite" :icon="Star">收藏</el-button>
               </div>
             </div>
           </div>
@@ -92,8 +113,8 @@
           <div class="comments-list">
             <div v-for="comment in comments" :key="comment.id" class="comment-item">
               <div class="comment-header">
-                <span class="username">{{ comment.username }}</span>
-                <span class="time">{{ comment.createTime }}</span>
+                <span class="username">{{ comment.userName }}</span>
+                <span class="time">{{ comment.createdAt }}</span>
               </div>
               <div class="comment-content">
                 {{ comment.content }}
@@ -110,8 +131,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { getBookDetail, getBookComments, createComment } from '@/api/book'
-import { ElMessage } from 'element-plus'
-import { Picture } from '@element-plus/icons-vue'
+import { borrowBook } from '@/api/borrow'
+import { addFavorite } from '@/api/favorite'
+import { reserveBook } from '@/api/reservation'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Picture, Reading, Star, Clock } from '@element-plus/icons-vue'
 import type { Book, Comment } from '@/api/types'
 
 const visible = ref(false)
@@ -161,6 +185,88 @@ const open = async (id: number) => {
     ElMessage.error('获取详情失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 获取库存数量
+const getStock = (): number => {
+  if (!bookData.value) return 0
+  if (typeof bookData.value.stock === 'number') {
+    return bookData.value.stock
+  }
+  if (typeof bookData.value.total === 'number') {
+    return bookData.value.total
+  }
+  return 1
+}
+
+// 获取库存标签类型
+const getStockType = () => {
+  return getStock() > 0 ? 'success' : 'danger'
+}
+
+// 借阅图书
+const handleBorrow = () => {
+  if (!bookData.value) return
+  
+  ElMessageBox.confirm(
+    `确定要借阅图书 "${bookData.value.title}" 吗?`,
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'info',
+    }
+  )
+    .then(async () => {
+      try {
+        await borrowBook({ bookId: currentBookId.value })
+        ElMessage.success('借阅成功')
+        // 刷新详情
+        open(currentBookId.value)
+      } catch (error: any) {
+        console.error(error)
+        ElMessage.error(error?.message || '借阅失败')
+      }
+    })
+    .catch(() => {})
+}
+
+// 预约图书
+const handleReserve = () => {
+  if (!bookData.value) return
+  
+  ElMessageBox.confirm(
+    `图书 "${bookData.value.title}" 当前已借出，预约后将优先为您保留。确定要预约吗？`,
+    '预约图书',
+    {
+      confirmButtonText: '确定预约',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(async () => {
+      try {
+        await reserveBook({ bookId: currentBookId.value })
+        ElMessage.success('预约成功！图书归还后将优先通知您。可在"预约记录"页面查看')
+      } catch (error: any) {
+        console.error(error)
+        ElMessage.error(error?.message || '预约失败，请稍后重试')
+      }
+    })
+    .catch(() => {})
+}
+
+// 收藏图书
+const handleFavorite = async () => {
+  if (!bookData.value) return
+  
+  try {
+    await addFavorite({ bookId: currentBookId.value })
+    ElMessage.success('添加收藏成功')
+  } catch (error: any) {
+    console.error(error)
+    ElMessage.error(error?.message || '收藏失败')
   }
 }
 
@@ -257,6 +363,12 @@ defineExpose({
 }
 .stock-info {
   margin-top: 15px;
+}
+.action-buttons {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .description h4, .section h4 {
   margin: 0 0 10px 0;

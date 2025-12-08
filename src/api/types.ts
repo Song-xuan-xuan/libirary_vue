@@ -25,7 +25,7 @@ export interface ApiResponse<T = unknown> {
 
 // 分页数据结构
 export interface PaginatedData<T> {
-  list: T[]                 // 数据列表（接口文档使用 list，不是 result）
+  list: T[]                 // 数据列表
   total: number             // 总条数
   offset: number           // 当前页码
   limit: number          // 每页条数
@@ -91,7 +91,7 @@ export interface RegisterParams {
 /**
  * 修改密码请求参数
  * PUT /api/auth/password
- * 接口文档使用驼峰命名：oldPassword、newPassword
+ * 
  */
 export interface ChangePasswordParams {
   oldPassword: string       // 旧密码
@@ -101,7 +101,7 @@ export interface ChangePasswordParams {
 /**
  * 修改用户基础信息请求参数
  * PUT /api/auth/me
- * 接口文档新增接口
+
  */
 export interface UpdateUserInfoParams {
   name: string              // 姓名不为空
@@ -111,7 +111,6 @@ export interface UpdateUserInfoParams {
 // ============ 图书模块 ============
 /**
  * 标签信息
- * 根据接口文档 GET /tags 返回结构定义
  */
 export interface Tag {
   id: number
@@ -121,7 +120,6 @@ export interface Tag {
 /**
  * 图书信息
  * 根据接口文档图书详情返回结构定义
- * 注意：接口文档中未提及 coverUrl、publishYear、total、stock 等字段
  * 这些字段保留为可选，等待后端实际返回数据确认
  */
 export interface Book {
@@ -145,15 +143,14 @@ export interface Comment {
   id: number
   bookId: number            // 图书 ID
   userId: number            // 评论用户 ID
-  username: string          // 评论用户名
+  userName: string          // 评论用户名
   content: string           // 评论内容
-  createTime: string        // 评论时间（接口文档使用 createTime）
+  createdAt: string        // 评论时间
 }
 
 /**
  * 创建图书请求参数
  * POST /api/books
- * 根据接口文档定义
  */
 export interface CreateBookParams {
   title: string             // 必填：书名
@@ -169,7 +166,6 @@ export interface CreateBookParams {
 /**
  * 获取图书列表请求参数
  * GET /api/books（Query 参数）
- * 根据接口文档定义
  */
 export interface GetBooksParams extends PaginationParams {
   title?: string            // 图书标题模糊查询
@@ -179,7 +175,6 @@ export interface GetBooksParams extends PaginationParams {
 /**
  * 更新图书请求参数
  * PUT /api/books/{id}
- * 根据接口文档定义
  */
 export interface UpdateBookParams {
   id: number                // 路径参数：图书 ID
@@ -301,9 +296,7 @@ export interface RemoveFavoriteParams {
  * 根据接口文档 GET /statistics/top-books 返回结构定义
  */
 export interface TopBorrowedBook {
-  bookId: number            // 图书 ID
-  title: string             // 图书名称
-  author: string            // 图书作者
+  bookTitle: string         // 图书名称（接口返回 bookTitle）
   borrowCount: number       // 被借阅总次数
 }
 
@@ -322,12 +315,11 @@ export interface TopBorrower {
  * 根据接口文档 GET /statistics/activities 返回结构定义
  */
 export interface ActivityRecord {
-  id: number                // 借阅记录 ID
-  userId: number            // 借阅用户 ID
-  username: string          // 借阅用户名
-  bookId: number            // 图书 ID
+  id?: number               // 可选的唯一标识
+  userName: string          // 用户名（接口返回 userName）
   bookTitle: string         // 图书名称
-  borrowTime: string        // 借阅时间
+  action: string            // 动作："借阅" 或 "归还"
+  time: string              // 发生时间
 }
 
 // Analytics 响应结构

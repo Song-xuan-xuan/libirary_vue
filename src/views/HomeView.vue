@@ -49,16 +49,16 @@
         </el-button>
       </div>
       <div class="activity-list" v-loading="activitiesLoading">
-        <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
+        <div v-for="(activity, index) in recentActivities" :key="activity.id || index" class="activity-item">
           <div class="activity-icon activity-icon-borrow">
             <el-icon><Reading /></el-icon>
           </div>
           <div class="activity-content">
-            <span class="activity-user">{{ activity.username }}</span>
-            <span class="activity-action">{{ getActivityLabel() }}</span>
+            <span class="activity-user">{{ activity.userName }}</span>
+            <span class="activity-action">{{ activity.action }}</span>
             <span class="activity-book">《{{ activity.bookTitle }}》</span>
           </div>
-          <div class="activity-time">{{ formatTime(activity.borrowTime) }}</div>
+          <div class="activity-time">{{ formatTime(activity.time) }}</div>
         </div>
         <div v-if="recentActivities.length === 0 && !activitiesLoading" class="empty-activities">
           暂无动态
@@ -95,7 +95,11 @@
               <span :class="['rank-badge', 'rank-' + scope.row.rank]">{{ scope.row.rank }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="name" label="姓名" />
+          <el-table-column prop="name" label="姓名" show-overflow-tooltip>
+            <template #default="scope">
+              <span>{{ scope.row.name || '未知用户' }}</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="count" label="借阅量" width="80" align="center" />
         </el-table>
       </div>
@@ -106,6 +110,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { Reading, Collection, Timer, Star, Clock, Refresh } from '@element-plus/icons-vue'
 import {
@@ -151,18 +156,23 @@ const stats = ref({
 const recentActivities = ref<ActivityRecord[]>([])
 const activitiesLoading = ref(false)
 
-// 新接口的ActivityRecord没有type字段，统一显示为"借阅了"
-const getActivityLabel = () => '借阅了'
 const formatTime = (dateStr: string) => formatRelativeTime(dateStr)
 
 const refreshActivities = async () => {
   activitiesLoading.value = true
   try {
     const res = await getRecentActivities(8)
-    // 响应拦截器已处理失败情况，这里能收到的都是成功的
-    recentActivities.value = res.data
+    const activities = extractArray(res, "刷新动态")
+    recentActivities.value = activities.map((a: any) => ({
+      id: a.id,
+      userName: a.userName,
+      bookTitle: a.bookTitle,
+      action: a.action,
+      time: a.time
+    }))
   } catch (error) {
     console.error('刷新动态失败:', error)
+    ElMessage.error('刷新动态失败,请稍后重试')
   } finally {
     activitiesLoading.value = false
   }
@@ -176,112 +186,138 @@ const topBooksLoading = ref(false)
 const topUsers = ref<{ rank: number; userId: number; name: string; count: number }[]>([])
 const topUsersLoading = ref(false)
 
-// ============ 加载数据 ============
-// 通用的取列表长度/总数的辅助函数
-const getCount = (resData: any): number => {
-  if (!resData) return 0
-  
-  // 优先取 total 字段
-  if (typeof resData.total === 'number') return resData.total
-  
-  // 尝试从 result.data 中取值（兼容后端返回 { result: { data: { list, total } } }）
-  if (resData.result?.data) {
-    if (typeof resData.result.data.total === 'number') return resData.result.data.total
-    if (Array.isArray(resData.result.data.list)) return resData.result.data.list.length
+// ============ 通用数据提取器 ============
+const extractArray = (res: any, apiName: string) => {
+  if (!res) return [];
+
+  console.log(`[${apiName}] 原始数据:`, res);
+
+  // 1. 拦截器已处理, res.data 就是数组
+  if (Array.isArray(res.data)) {
+    return res.data;
+  }
+
+  // 2. 标准 Axios, res.data.data 是数组
+  if (res.data && Array.isArray(res.data.data)) {
+    return res.data.data;
+  }
+
+  // 3. result 结构
+  if (res.result && Array.isArray(res.result.data)) {
+    return res.result.data;
   }
   
-  // 其次看是不是数组
-  if (Array.isArray(resData)) return resData.length
-  
-  // 再看有没有 list 字段
-  if (Array.isArray(resData.list)) return resData.list.length
-  
-  // 再看有没有 result 字段
-  if (Array.isArray(resData.result)) return resData.result.length
-  
-  return 0
-}
+  // 4. res 本身就是数组
+  if (Array.isArray(res)) {
+    return res;
+  }
 
-const loadHomeData = async () => {
-  // 并行加载所有数据
-  activitiesLoading.value = true
-  topBooksLoading.value = true
-  topUsersLoading.value = true
+  console.warn(`❌ [${apiName}] 未找到数组!`);
+  return [];
+};
+
+// ============ 加载个人统计数据(借阅、收藏、预约) ============
+const loadPersonalStats = async () => {
+  try {
+    const results = await Promise.allSettled([
+      getBorrowList(),
+      getFavoriteList(),
+      getReservationList()
+    ]);
+
+    // 借阅数 - 只统计 status=0(借阅中) 的记录
+    if (results[0].status === "fulfilled") {
+      const list = extractArray(results[0].value, "借阅列表");
+      // 过滤出借阅中的记录 (status: 0=借阅中, 1=已归还, 2=逾期)
+      stats.value.borrowCount = list.filter((item: any) => item.status === 0).length;
+    }
+
+    // 收藏数
+    if (results[1].status === "fulfilled") {
+      const list = extractArray(results[1].value, "收藏列表");
+      stats.value.favoriteCount = list.length;
+    }
+
+    // 预约数 - 只统计 status=0(等待中) 或 status=2(已满足) 的有效预约
+    if (results[2].status === "fulfilled") {
+      const list = extractArray(results[2].value, "预约列表");
+      // 过滤出有效预约 (status: 0=等待中, 1=已取消, 2=已满足)
+      stats.value.reserveCount = list.filter((item: any) => item.status === 0 || item.status === 2).length;
+    }
+  } catch (error) {
+    console.error("加载个人统计数据失败:", error);
+    ElMessage.warning('加载个人统计数据失败');
+  }
+};
+
+// ============ 加载统计分析数据(动态、热门图书、阅读之星) ============
+const loadAnalytics = async () => {
+  activitiesLoading.value = true;
+  topBooksLoading.value = true;
+  topUsersLoading.value = true;
 
   try {
-    // --- 核心修复：使用 Promise.allSettled 替代 Promise.all ---
-    // 这样即使某个接口失败，其他数据依然能显示，不会全崩
     const results = await Promise.allSettled([
-      getBorrowList(),           // 0: 借阅列表（不需要参数）
-      getFavoriteList(),         // 1: 收藏列表（不需要参数）
-      getReservationList(),      // 2: 预约列表（不需要参数）
-      getRecentActivities(8),    // 3: 最近动态
-      getTopBorrowedBooks(10),   // 4: 热门图书
-      getTopBorrowers(5)         // 5: 阅读之星
-    ])
+      getRecentActivities(8),
+      getTopBorrowedBooks(10),
+      getTopBorrowers(5)
+    ]);
 
-    // 1. 处理借阅数
-    if (results[0].status === 'fulfilled' && results[0].value) {
-      const res = results[0].value as any
-      stats.value.borrowCount = getCount(res.data || res.result?.data || res)
+    // 最近动态
+    if (results[0].status === "fulfilled") {
+      const activities = extractArray(results[0].value, "最近动态");
+      recentActivities.value = activities.map((a: any) => ({
+        id: a.id,
+        userName: a.userName,
+        bookTitle: a.bookTitle,
+        action: a.action,
+        time: a.time
+      }));
     }
+    activitiesLoading.value = false;
 
-    // 2. 处理收藏数
-    if (results[1].status === 'fulfilled' && results[1].value) {
-      const res = results[1].value as any
-      stats.value.favoriteCount = getCount(res.data || res.result?.data || res)
-    }
-
-    // 3. 处理预约数
-    if (results[2].status === 'fulfilled' && results[2].value) {
-      const res = results[2].value as any
-      stats.value.reserveCount = getCount(res.data || res.result?.data || res)
-    }
-
-    // 4. 处理最近动态
-    if (results[3].status === 'fulfilled' && results[3].value) {
-      const res = results[3].value as any
-      recentActivities.value = res.data || []
-    }
-    activitiesLoading.value = false
-
-    // 5. 处理热门图书 Top 10
-    if (results[4].status === 'fulfilled' && results[4].value) {
-      const res = results[4].value as any
-      const booksData = res.data || []
-      topBooks.value = booksData.map((b: TopBorrowedBook, index: number) => ({
+    // 热门图书
+    if (results[1].status === "fulfilled") {
+      const books = extractArray(results[1].value, "热门图书");
+      topBooks.value = books.map((b: any, index: number) => ({
         rank: index + 1,
         bookId: b.bookId,
-        title: b.title,
-        author: b.author,
-        count: b.borrowCount
-      }))
+        title: b.bookTitle,
+        author: b.author || '未知作者',
+        count: b.borrowCount || 0
+      }));
     }
-    topBooksLoading.value = false
+    topBooksLoading.value = false;
 
-    // 6. 处理阅读之星 Top 5
-    if (results[5].status === 'fulfilled' && results[5].value) {
-      const res = results[5].value as any
-      const usersData = res.data || []
-      topUsers.value = usersData.map((u: TopBorrower, index: number) => ({
-        rank: index + 1,
-        userId: u.userId,
-        name: u.username,
-        count: u.borrowCount
-      }))
+    // 阅读之星
+    if (results[2].status === "fulfilled") {
+      const users = extractArray(results[2].value, "阅读之星");
+      topUsers.value = users.map((u: any, index: number) => {
+        const user = {
+          rank: index + 1,
+          userId: u.userId || u.id,
+          name: u.username || u.name || u.userName || '匿名用户',
+          count: u.borrowCount || 0
+        };
+        return user;
+      });
     }
-    topUsersLoading.value = false
+    topUsersLoading.value = false;
 
   } catch (error) {
-    console.error('加载首页数据失败:', error)
-    activitiesLoading.value = false
-    topBooksLoading.value = false
-    topUsersLoading.value = false
+    console.error("加载统计分析数据失败:", error);
+    ElMessage.warning('加载统计分析数据失败');
+    activitiesLoading.value = false;
+    topBooksLoading.value = false;
+    topUsersLoading.value = false;
   }
-}
+};
+
 
 onMounted(() => {
-  loadHomeData()
+  // 并行加载两组数据
+  loadPersonalStats();
+  loadAnalytics();
 })
 </script>
 

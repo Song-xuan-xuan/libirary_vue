@@ -28,6 +28,14 @@
         <el-table-column prop="title" label="书名" min-width="200" show-overflow-tooltip />
         <el-table-column prop="author" label="作者" min-width="120" show-overflow-tooltip />
         <el-table-column prop="description" label="简介" min-width="200" show-overflow-tooltip />
+        <el-table-column label="库存" width="100" align="center">
+          <template #default="scope">
+            <el-tag v-if="getStock(scope.row) > 0" type="success" size="small">
+              在馆 {{ getStock(scope.row) }}
+            </el-tag>
+            <el-tag v-else type="danger" size="small">已借出</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="300" fixed="right" align="center">
           <template #default="scope">
             <el-button link type="primary" size="small" @click="handleDetail(scope.row)">详情</el-button>
@@ -39,7 +47,7 @@
 
             <!-- 借阅按钮：有库存时显示 -->
             <el-button 
-              v-if="!scope.row.stock || scope.row.stock > 0"
+              v-if="getStock(scope.row) > 0"
               link 
               type="primary" 
               size="small" 
@@ -50,7 +58,7 @@
 
             <!-- 预约按钮：库存为0时显示 -->
             <el-button 
-              v-if="scope.row.stock === 0"
+              v-else
               link 
               type="warning" 
               size="small" 
@@ -197,6 +205,20 @@ const isAdmin = computed(() => {
   return userStore.role === 'admin'
 })
 
+// 获取库存数量（处理各种情况）
+const getStock = (book: Book): number => {
+  // 如果 stock 字段存在，直接返回
+  if (typeof book.stock === 'number') {
+    return book.stock
+  }
+  // 如果 total 字段存在，默认全部在馆
+  if (typeof book.total === 'number') {
+    return book.total
+  }
+  // 默认有库存（让用户可以借阅）
+  return 1
+}
+
 // 搜索表单
 const searchForm = reactive({
   title: '',
@@ -269,7 +291,7 @@ const fetchData = async () => {
   loading.value = true
   try {
     const params = {
-      offset: currentPage.value,
+      offset: currentPage.value-1,
       limit: pageSize.value,
       ...searchForm
     }
@@ -278,7 +300,7 @@ const fetchData = async () => {
     // 后端返回格式：{ result: { data: { list: [...], total: 10 } } }
     if (res?.data) {
       const data = res.data
-      tableData.value = data.result?.data?.list || []
+      tableData.value = data.result|| []
       total.value = data.total || 0
     } else {
       // 数据不存在，清空
@@ -430,7 +452,7 @@ const handleFavorite = async (row: Book) => {
 
 const handleReserve = (row: Book) => {
   ElMessageBox.confirm(
-    `图书 "${row.title}" 当前库存为0，确定要预约吗？`,
+    `图书 "${row.title}" 当前已借出，预约后将优先为您保留。确定要预约吗？`,
     '预约图书',
     {
       confirmButtonText: '确定预约',
@@ -441,10 +463,10 @@ const handleReserve = (row: Book) => {
     .then(async () => {
       try {
         await reserveBook({ bookId: row.id })
-        ElMessage.success('预约成功，请前往“预约管理”页面查看')
-      } catch (error) {
+        ElMessage.success('预约成功！图书归还后将优先通知您。可在“预约记录”页面查看')
+      } catch (error: any) {
         console.error(error)
-        ElMessage.error('预约失败')
+        ElMessage.error(error?.message || '预约失败，请稍后重试')
       }
     })
     .catch(() => {})

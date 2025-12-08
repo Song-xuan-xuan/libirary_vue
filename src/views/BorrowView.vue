@@ -14,18 +14,27 @@
       </template>
       
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column prop="bookTitle" label="书名" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="bookTitle" label="书名" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="bookAuthor" label="作者" width="120" align="center" show-overflow-tooltip />
         <el-table-column prop="borrowTime" label="借出时间" width="180" align="center" />
+        <el-table-column prop="dueTime" label="应还时间" width="180" align="center" />
         <el-table-column prop="returnTime" label="归还时间" width="180" align="center">
           <template #default="scope">
             <span v-if="scope.row.returnTime">{{ scope.row.returnTime }}</span>
             <el-tag v-else type="warning">未归还</el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="scope">
+            <el-tag :type="getStatusType(scope.row.status)">
+              {{ scope.row.statusDesc || getStatusText(scope.row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="120" align="center" fixed="right">
           <template #default="scope">
             <el-button 
-              v-if="!scope.row.returnTime" 
+              v-if="scope.row.status === 0" 
               type="primary" 
               size="small" 
               :loading="returningId === scope.row.id"
@@ -33,7 +42,8 @@
             >
               归还
             </el-button>
-            <span v-else class="returned-text">已归还</span>
+            <span v-else-if="scope.row.status === 1" class="returned-text">已归还</span>
+            <el-tag v-else-if="scope.row.status === 2" type="danger" size="small">逾期</el-tag>
           </template>
         </el-table-column>
       </el-table>
@@ -51,6 +61,27 @@ import { Refresh } from '@element-plus/icons-vue'
 const loading = ref(false)
 const tableData = ref<BorrowRecord[]>([])
 const returningId = ref<number | null>(null)
+
+/**
+ * 借阅状态映射 (status: 0=借阅中, 1=已归还, 2=逾期)
+ */
+const getStatusType = (status: number) => {
+  const map: Record<number, string> = {
+    0: 'warning',   // 借阅中
+    1: 'success',   // 已归还
+    2: 'danger'     // 逾期
+  }
+  return map[status] || 'info'
+}
+
+const getStatusText = (status: number) => {
+  const map: Record<number, string> = {
+    0: '借阅中',
+    1: '已归还',
+    2: '逾期'
+  }
+  return map[status] || '未知'
+}
 
 const fetchData = async () => {
   loading.value = true
