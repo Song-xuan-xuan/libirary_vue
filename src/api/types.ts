@@ -27,15 +27,15 @@ export interface ApiResponse<T = unknown> {
 export interface PaginatedData<T> {
   list: T[]                 // 数据列表（接口文档使用 list，不是 result）
   total: number             // 总条数
-  pageNum: number           // 当前页码
-  pageSize: number          // 每页条数
+  offset: number           // 当前页码
+  limit: number          // 每页条数
   pages: number             // 总页数
 }
 
 // 分页请求参数
 export interface PaginationParams {
-  pageNum?: number          // 页码，默认 1
-  pageSize?: number         // 每页条数，默认 10
+  offset?: number          // 页码，默认 1
+  limit?: number         // 每页条数，默认 10
 }
 
 // ============ 用户模块 ============

@@ -269,8 +269,8 @@ const fetchData = async () => {
   loading.value = true
   try {
     const params = {
-      pageNum: currentPage.value,
-      pageSize: pageSize.value,
+      offset: currentPage.value,
+      limit: pageSize.value,
       ...searchForm
     }
     const res = await getBooks(params) as any

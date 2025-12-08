@@ -30,8 +30,8 @@ import type {
  * GET /api/books
  * 
  * Query 参数：
- * - pageNum: 页码（默认 1）
- * - pageSize: 每页条数（默认 10）
+ * - offset: 页码（默认 1）
+ * - limit: 每页条数（默认 10）
  * - title: 图书标题模糊查询
  * - author: 作者模糊查询
  */
