@@ -160,6 +160,10 @@ export interface CreateBookParams {
   author?: string           // 可选：作者
   description?: string      // 可选：简介
   isbn?: string             // 可选：ISBN 编号
+  publishYear?: number      // 可选：出版年份
+  coverUrl?: string         // 可选：封面图片链接
+  total?: number            // 可选：库存总量
+  tagIds?: number[]         // 可选：标签ID列表
 }
 
 /**
@@ -183,6 +187,10 @@ export interface UpdateBookParams {
   author?: string           // 可选：作者
   description?: string      // 可选：简介
   isbn?: string             // 可选：ISBN 编号
+  publishYear?: number      // 可选：出版年份
+  coverUrl?: string         // 可选：封面图片 URL
+  total?: number            // 可选：总数量
+  tagIds?: number[]         // 可选：标签ID列表
 }
 
 /**

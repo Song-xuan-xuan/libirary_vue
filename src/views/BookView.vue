@@ -106,6 +106,41 @@
         <el-form-item label="ISBN" prop="isbn">
           <el-input v-model="bookForm.isbn" placeholder="请输入ISBN" />
         </el-form-item>
+        <el-form-item label="出版年份" prop="publishYear">
+          <el-input-number 
+            v-model="bookForm.publishYear" 
+            :min="1900" 
+            :max="new Date().getFullYear() + 1" 
+            placeholder="请输入出版年份"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="封面链接" prop="coverUrl">
+          <el-input v-model="bookForm.coverUrl" placeholder="请输入封面图片链接（选填）" />
+        </el-form-item>
+        <el-form-item label="库存数量" prop="total">
+          <el-input-number 
+            v-model="bookForm.total" 
+            :min="0" 
+            placeholder="请输入库存数量"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="图书标签" prop="tagIds">
+          <el-select 
+            v-model="bookForm.tagIds" 
+            multiple 
+            placeholder="请选择标签"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="tag in tagOptions"
+              :key="tag.id"
+              :label="tag.name"
+              :value="tag.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="简介" prop="description">
           <el-input 
             v-model="bookForm.description" 
@@ -137,7 +172,8 @@ import { reserveBook } from '@/api/reservation'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star } from '@element-plus/icons-vue'
 import BookDetailDrawer from '@/views/BookDetailDrawer.vue'
-
+import type { Tag } from '@/api/types';
+import { getTags } from '@/api/book';
 // Book 类型定义
 interface Book {
   id: number
@@ -145,10 +181,16 @@ interface Book {
   author: string
   isbn?: string
   description?: string
+  publishYear?: number
+  coverUrl?: string
+  total?: number
+  stock?: number
+  tags?: Tag[]
 }
 
 const userStore = useUserStore()
 const detailDrawerRef = ref()
+const tagOptions = ref<Tag[]>([]);
 
 // 权限判断：仅管理员
 const isAdmin = computed(() => {
@@ -174,18 +216,38 @@ const dialogType = ref<'add' | 'edit'>('add')
 const submitLoading = ref(false)
 const bookFormRef = ref<FormInstance>()
 const editingBookId = ref<number | null>(null)
+// 获取标签列表 (页面加载时调用)
+const loadTags = async () => {
+  try {
+    const res = await getTags();
+    if (res.code === '0' || res.success) {
+      // 兼容处理：如果返回的是 res.data.list 或直接 res.data
+      tagOptions.value = Array.isArray(res.data) ? res.data : (res.data as any).list || [];
+    }
+  } catch (error) {
+    console.error('标签加载失败', error);
+  }
+};
+
 
 const bookForm = reactive({
   title: '',
   author: '',
   isbn: '',
-  description: ''
+  description: '',
+  publishYear: new Date().getFullYear(),
+  coverUrl: '',
+  total: 10,
+  tagIds: [] as number[]
 })
 
 const bookRules: FormRules = {
   title: [{ required: true, message: '请输入书名', trigger: 'blur' }],
   author: [{ required: true, message: '请输入作者', trigger: 'blur' }],
-  isbn: [{ required: true, message: '请输入ISBN', trigger: 'blur' }]
+  isbn: [{ required: true, message: '请输入ISBN', trigger: 'blur' }],
+  publishYear: [{ required: true, message: '请输入发布年份', trigger: 'blur' }],
+  total: [{ required: true, message: '请输入库存量', trigger: 'blur' }],
+  tagIds: [{ required: true, message: '请至少选择一个标签', trigger: 'change', type: 'array' }]
 }
 
 // 重置表单
@@ -194,6 +256,10 @@ const resetBookForm = () => {
   bookForm.author = ''
   bookForm.isbn = ''
   bookForm.description = ''
+  bookForm.publishYear = new Date().getFullYear()
+  bookForm.coverUrl = ''
+  bookForm.total = 10
+  bookForm.tagIds = []
   editingBookId.value = null
 }
 
@@ -210,7 +276,7 @@ const fetchData = async () => {
     const res = await getBooks(params) as any
     
     // 后端返回格式：{ result: { data: { list: [...], total: 10 } } }
-    if (res?.result?.data) {
+    if (res?.data) {
       const data = res.data
       tableData.value = data.list || []
       total.value = data.total || 0
@@ -266,10 +332,19 @@ const handleEdit = (row: Book) => {
   dialogType.value = 'edit'
   editingBookId.value = row.id
   // 填充表单数据
-  bookForm.title = row.title
-  bookForm.author = row.author
-  bookForm.isbn = row.isbn || ''
-  bookForm.description = row.description || ''
+  Object.assign(bookForm, {
+    id: row.id,
+    title: row.title,
+    author: row.author,
+    isbn: row.isbn,
+    description: row.description,
+    publishYear: row.publishYear,
+    coverUrl: row.coverUrl,
+    total: row.total,
+    // 核心逻辑：后端返回的是 tags: [{id:1, name:'科幻'}]
+    // 表单需要的是 tagIds: [1]
+    tagIds: row.tags ? row.tags.map((t: Tag) => t.id) : [] 
+  });
   dialogVisible.value = true
 }
 
@@ -282,12 +357,16 @@ const handleSubmit = async () => {
     
     submitLoading.value = true
     try {
-      // 构建 API 参数
+      // 构建 API 参数，确保数字类型正确
       const apiParams = {
         title: bookForm.title,
         author: bookForm.author,
         isbn: bookForm.isbn,
-        description: bookForm.description
+        description: bookForm.description,
+        publishYear: Number(bookForm.publishYear),
+        coverUrl: bookForm.coverUrl,
+        total: Number(bookForm.total),
+        tagIds: bookForm.tagIds
       }
       
       if (dialogType.value === 'add') {
@@ -396,6 +475,7 @@ const handleDelete = (row: Book) => {
 
 onMounted(() => {
   fetchData()
+  loadTags();
 })
 </script>
 
