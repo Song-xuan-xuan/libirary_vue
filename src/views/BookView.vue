@@ -207,11 +207,22 @@ const fetchData = async () => {
       pageSize: pageSize.value,
       ...searchForm
     }
-    const res = await getBooks(params) as ApiResponse<PaginatedData<Book>>
-    tableData.value = res.data.list
-    total.value = res.data.total
+    const res = await getBooks(params) as any
+    
+    // 后端返回格式：{ result: { data: { list: [...], total: 10 } } }
+    if (res?.result?.data) {
+      const data = res.data
+      tableData.value = data.list || []
+      total.value = data.total || 0
+    } else {
+      // 数据不存在，清空
+      tableData.value = []
+      total.value = 0
+    }
   } catch (error) {
-    console.error(error)
+    console.error('获取图书失败:', error)
+    tableData.value = [] // 出错清空
+    total.value = 0
     ElMessage.error('获取图书列表失败')
   } finally {
     loading.value = false

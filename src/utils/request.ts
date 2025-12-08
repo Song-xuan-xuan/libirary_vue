@@ -5,10 +5,23 @@ import { useUserStore } from '@/stores/user'
 
 /**
  * 判断 API 响应是否成功
- * 兼容多种成功标识：success=true 或 code=0/'0'/200
+ * 兼容多种成功标识：
+ * 1. success 字段明确为 true
+ * 2. code 是数字 0 或 200
+ * 3. code 是字符串 "0" 或 "200" 或 "ok"
  */
 const isSuccess = (res: any): boolean => {
-  return res.success === true || res.code === '0' || res.code === 0 || res.code === 200
+  const code = res.code
+  // 兼容多种成功情况
+  return (
+    res.success === true ||
+    code === 0 ||
+    code === 200 ||
+    code === '0' ||
+    code === '200' ||
+    code === 'ok' ||
+    code === 'OK'
+  )
 }
 
 /**

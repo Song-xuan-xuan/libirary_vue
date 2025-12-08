@@ -56,10 +56,21 @@ const fetchData = async () => {
   loading.value = true
   try {
     // GET /borrow/list - 返回当前用户的所有借阅记录
-    const res = await getBorrowList()
-    tableData.value = res.data
+    const res = await getBorrowList() as any
+    
+    // 兜底逻辑：兼容多种数据格式
+    if (res?.result?.data) {
+      // 格式: { result: { data: [...] } }
+      tableData.value = Array.isArray(res.result.data) ? res.result.data : []
+    } else if (res?.data) {
+      // 格式: { data: [...] }
+      tableData.value = Array.isArray(res.data) ? res.data : []
+    } else {
+      tableData.value = []
+    }
   } catch (error) {
     console.error(error)
+    tableData.value = []
     ElMessage.error('获取借阅记录失败')
   } finally {
     loading.value = false

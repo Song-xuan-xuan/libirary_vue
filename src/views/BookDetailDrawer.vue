@@ -140,12 +140,20 @@ const open = async (id: number) => {
   
   try {
     // 获取图书详情（RESTful 风格）
-    const bookRes = await getBookDetail(id)
-    bookData.value = bookRes.data
+    const bookRes = await getBookDetail(id) as any
+    // 兜底逻辑
+    bookData.value = bookRes?.result?.data || bookRes?.data || null
     
     // 获取评论列表
-    const commentsRes = await getBookComments(id)
-    comments.value = commentsRes.data
+    const commentsRes = await getBookComments(id) as any
+    // 兜底逻辑：兼容多种数据格式
+    if (commentsRes?.result?.data) {
+      comments.value = Array.isArray(commentsRes.result.data) ? commentsRes.result.data : []
+    } else if (commentsRes?.data) {
+      comments.value = Array.isArray(commentsRes.data) ? commentsRes.data : []
+    } else {
+      comments.value = []
+    }
   } catch (error) {
     console.error(error)
     ElMessage.error('获取详情失败')
@@ -178,8 +186,15 @@ const submitComment = async () => {
     commentContent.value = ''
     
     // 刷新评论列表
-    const commentsRes = await getBookComments(currentBookId.value)
-    comments.value = commentsRes.data
+    const commentsRes = await getBookComments(currentBookId.value) as any
+    // 兜底逻辑
+    if (commentsRes?.result?.data) {
+      comments.value = Array.isArray(commentsRes.result.data) ? commentsRes.result.data : []
+    } else if (commentsRes?.data) {
+      comments.value = Array.isArray(commentsRes.data) ? commentsRes.data : []
+    } else {
+      comments.value = []
+    }
   } catch (error) {
     console.error(error)
     ElMessage.error('评论发表失败')

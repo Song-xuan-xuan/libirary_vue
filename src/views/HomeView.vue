@@ -177,6 +177,31 @@ const topUsers = ref<{ rank: number; userId: number; name: string; count: number
 const topUsersLoading = ref(false)
 
 // ============ 加载数据 ============
+// 通用的取列表长度/总数的辅助函数
+const getCount = (resData: any): number => {
+  if (!resData) return 0
+  
+  // 优先取 total 字段
+  if (typeof resData.total === 'number') return resData.total
+  
+  // 尝试从 result.data 中取值（兼容后端返回 { result: { data: { list, total } } }）
+  if (resData.result?.data) {
+    if (typeof resData.result.data.total === 'number') return resData.result.data.total
+    if (Array.isArray(resData.result.data.list)) return resData.result.data.list.length
+  }
+  
+  // 其次看是不是数组
+  if (Array.isArray(resData)) return resData.length
+  
+  // 再看有没有 list 字段
+  if (Array.isArray(resData.list)) return resData.list.length
+  
+  // 再看有没有 result 字段
+  if (Array.isArray(resData.result)) return resData.result.length
+  
+  return 0
+}
+
 const loadHomeData = async () => {
   // 并行加载所有数据
   activitiesLoading.value = true
@@ -184,52 +209,67 @@ const loadHomeData = async () => {
   topUsersLoading.value = true
 
   try {
-    // 并行请求三个模块的统计数据和分析数据
-    const [borrowRes, favRes, reserveRes, activitiesRes, booksRes, usersRes] = await Promise.all([
-      getBorrowList(),
-      getFavoriteList(),
-      getReservationList(),
-      getRecentActivities(8),
-      getTopBorrowedBooks(10),
-      getTopBorrowers(5)
+    // --- 核心修复：使用 Promise.allSettled 替代 Promise.all ---
+    // 这样即使某个接口失败，其他数据依然能显示，不会全崩
+    const results = await Promise.allSettled([
+      getBorrowList(),           // 0: 借阅列表（不需要参数）
+      getFavoriteList(),         // 1: 收藏列表（不需要参数）
+      getReservationList(),      // 2: 预约列表（不需要参数）
+      getRecentActivities(8),    // 3: 最近动态
+      getTopBorrowedBooks(10),   // 4: 热门图书
+      getTopBorrowers(5)         // 5: 阅读之星
     ])
 
-    // 更新借阅数
-    if (borrowRes && borrowRes.data) {
-      stats.value.borrowCount = Array.isArray(borrowRes.data) ? borrowRes.data.length : 0
+    // 1. 处理借阅数
+    if (results[0].status === 'fulfilled' && results[0].value) {
+      const res = results[0].value as any
+      stats.value.borrowCount = getCount(res.data || res.result?.data || res)
     }
 
-    // 更新收藏数
-    if (favRes && favRes.data) {
-      stats.value.favoriteCount = Array.isArray(favRes.data) ? favRes.data.length : 0
+    // 2. 处理收藏数
+    if (results[1].status === 'fulfilled' && results[1].value) {
+      const res = results[1].value as any
+      stats.value.favoriteCount = getCount(res.data || res.result?.data || res)
     }
 
-    // 更新预约数
-    if (reserveRes && reserveRes.data) {
-      stats.value.reserveCount = Array.isArray(reserveRes.data) ? reserveRes.data.length : 0
+    // 3. 处理预约数
+    if (results[2].status === 'fulfilled' && results[2].value) {
+      const res = results[2].value as any
+      stats.value.reserveCount = getCount(res.data || res.result?.data || res)
     }
 
-    // 更新最近动态
-    recentActivities.value = activitiesRes.data
+    // 4. 处理最近动态
+    if (results[3].status === 'fulfilled' && results[3].value) {
+      const res = results[3].value as any
+      recentActivities.value = res.data || []
+    }
     activitiesLoading.value = false
 
-    // 更新热门图书 Top 10
-    topBooks.value = booksRes.data.map((b: TopBorrowedBook, index: number) => ({
-      rank: index + 1,
-      bookId: b.bookId,
-      title: b.title,
-      author: b.author,
-      count: b.borrowCount
-    }))
+    // 5. 处理热门图书 Top 10
+    if (results[4].status === 'fulfilled' && results[4].value) {
+      const res = results[4].value as any
+      const booksData = res.data || []
+      topBooks.value = booksData.map((b: TopBorrowedBook, index: number) => ({
+        rank: index + 1,
+        bookId: b.bookId,
+        title: b.title,
+        author: b.author,
+        count: b.borrowCount
+      }))
+    }
     topBooksLoading.value = false
 
-    // 更新阅读之星 Top 5
-    topUsers.value = usersRes.data.map((u: TopBorrower, index: number) => ({
-      rank: index + 1,
-      userId: u.userId,
-      name: u.username,
-      count: u.borrowCount
-    }))
+    // 6. 处理阅读之星 Top 5
+    if (results[5].status === 'fulfilled' && results[5].value) {
+      const res = results[5].value as any
+      const usersData = res.data || []
+      topUsers.value = usersData.map((u: TopBorrower, index: number) => ({
+        rank: index + 1,
+        userId: u.userId,
+        name: u.username,
+        count: u.borrowCount
+      }))
+    }
     topUsersLoading.value = false
 
   } catch (error) {
