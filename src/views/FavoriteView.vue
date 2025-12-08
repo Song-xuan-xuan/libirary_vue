@@ -47,9 +47,7 @@ const fetchData = async () => {
   try {
     // GET /favorites/list - 返回当前用户的所有收藏记录
     const res = await getFavoriteList()
-    if (res.code === '0' && res.success) {
-      tableData.value = res.data
-    }
+    tableData.value = res.data
   } catch (error) {
     console.error(error)
     ElMessage.error('获取收藏列表失败')

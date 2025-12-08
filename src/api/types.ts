@@ -17,7 +17,7 @@
  * 根据接口文档通用返回格式定义
  */
 export interface ApiResponse<T = unknown> {
-  code: string              // 状态码，"0" 表示成功
+  code: string | number     // 状态码，0 或 "0" 或 200 表示成功
   message: string | null    // 消息提示，可为 null
   data: T                   // 响应数据
   success: boolean          // 是否成功

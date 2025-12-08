@@ -57,9 +57,7 @@ const fetchData = async () => {
   try {
     // GET /borrow/list - 返回当前用户的所有借阅记录
     const res = await getBorrowList()
-    if (res.code === '0' && res.success) {
-      tableData.value = res.data
-    }
+    tableData.value = res.data
   } catch (error) {
     console.error(error)
     ElMessage.error('获取借阅记录失败')
@@ -90,15 +88,11 @@ const handleReturn = (row: BorrowRecord) => {
       
       try {
         // 接口文档：POST /borrow/return 参数为 bookId
-        const res: ApiResponse<null> = await returnBook({ bookId: row.bookId })
+        await returnBook({ bookId: row.bookId })
         
-        if (res.code === '0' && res.success) {
-          ElMessage.success('还书成功')
-          // 刷新借阅列表
-          await fetchData()
-        } else {
-          ElMessage.error(res.message || '归还失败')
-        }
+        ElMessage.success('还书成功')
+        // 刷新借阅列表
+        await fetchData()
       } catch (error) {
         console.error(error)
         ElMessage.error('归还操作失败，请稍后重试')

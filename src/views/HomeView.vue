@@ -17,29 +17,22 @@
 
     <!-- 数据概览 -->
     <div class="stats-row">
-      <div class="stat-item" @click="$router.push('/borrow')">
-        <div class="stat-number">{{ stats.borrowing }}</div>
+      <div class="stat-item" @click="$router.push('/library/borrow')">
+        <div class="stat-number">{{ stats.borrowCount }}</div>
         <div class="stat-label">当前借阅</div>
         <div class="stat-icon icon-blue">
           <el-icon><Collection /></el-icon>
         </div>
       </div>
-      <div class="stat-item" @click="$router.push('/borrow')">
-        <div class="stat-number">{{ stats.overdue }}</div>
-        <div class="stat-label">已逾期</div>
-        <div class="stat-icon icon-orange">
-          <el-icon><Timer /></el-icon>
-        </div>
-      </div>
-      <div class="stat-item" @click="$router.push('/appointment')">
-        <div class="stat-number">{{ stats.reservation }}</div>
+      <div class="stat-item" @click="$router.push('/library/appointment')">
+        <div class="stat-number">{{ stats.reserveCount }}</div>
         <div class="stat-label">预约中</div>
         <div class="stat-icon icon-purple">
           <el-icon><Clock /></el-icon>
         </div>
       </div>
-      <div class="stat-item" @click="$router.push('/favorite')">
-        <div class="stat-number">{{ stats.favorite }}</div>
+      <div class="stat-item" @click="$router.push('/library/favorite')">
+        <div class="stat-number">{{ stats.favoriteCount }}</div>
         <div class="stat-label">我的收藏</div>
         <div class="stat-icon icon-red">
           <el-icon><Star /></el-icon>
@@ -124,6 +117,9 @@ import {
   type TopBorrowedBook,
   type TopBorrower
 } from '@/api/analytics'
+import { getBorrowList } from '@/api/borrow'
+import { getFavoriteList } from '@/api/favorite'
+import { getReservationList } from '@/api/reservation'
 
 const userStore = useUserStore()
 
@@ -145,14 +141,10 @@ const currentDate = computed(() => {
 })
 
 // ============ 统计数据 ============
-// 注意：新接口文档中没有user-stats接口，这里使用临时数据
-// 实际数据需要从借阅列表、预约列表、收藏列表中统计
 const stats = ref({
-  borrowing: 0,
-  overdue: 0,
-  returned: 0,
-  favorite: 0,
-  reservation: 0
+  borrowCount: 0,
+  favoriteCount: 0,
+  reserveCount: 0
 })
 
 // ============ 最近动态 ============
@@ -167,9 +159,8 @@ const refreshActivities = async () => {
   activitiesLoading.value = true
   try {
     const res = await getRecentActivities(8)
-    if (res.code === '0' && res.success) {
-      recentActivities.value = res.data
-    }
+    // 响应拦截器已处理失败情况，这里能收到的都是成功的
+    recentActivities.value = res.data
   } catch (error) {
     console.error('刷新动态失败:', error)
   } finally {
@@ -193,40 +184,52 @@ const loadHomeData = async () => {
   topUsersLoading.value = true
 
   try {
-    // 注意：接口文档中没有user-stats接口
-    // stats数据需要从其他接口（借阅列表、预约列表、收藏列表）中统计
-    // 这里暂时保留默认值
+    // 并行请求三个模块的统计数据和分析数据
+    const [borrowRes, favRes, reserveRes, activitiesRes, booksRes, usersRes] = await Promise.all([
+      getBorrowList(),
+      getFavoriteList(),
+      getReservationList(),
+      getRecentActivities(8),
+      getTopBorrowedBooks(10),
+      getTopBorrowers(5)
+    ])
 
-    // 获取最近动态
-    const activitiesRes = await getRecentActivities(8)
-    if (activitiesRes.code === '0' && activitiesRes.success) {
-      recentActivities.value = activitiesRes.data
+    // 更新借阅数
+    if (borrowRes && borrowRes.data) {
+      stats.value.borrowCount = Array.isArray(borrowRes.data) ? borrowRes.data.length : 0
     }
+
+    // 更新收藏数
+    if (favRes && favRes.data) {
+      stats.value.favoriteCount = Array.isArray(favRes.data) ? favRes.data.length : 0
+    }
+
+    // 更新预约数
+    if (reserveRes && reserveRes.data) {
+      stats.value.reserveCount = Array.isArray(reserveRes.data) ? reserveRes.data.length : 0
+    }
+
+    // 更新最近动态
+    recentActivities.value = activitiesRes.data
     activitiesLoading.value = false
 
-    // 获取热门图书 Top 10
-    const booksRes = await getTopBorrowedBooks(10)
-    if (booksRes.code === '0' && booksRes.success) {
-      topBooks.value = booksRes.data.map((b: TopBorrowedBook, index: number) => ({
-        rank: index + 1,
-        bookId: b.bookId,
-        title: b.title,
-        author: b.author,
-        count: b.borrowCount
-      }))
-    }
+    // 更新热门图书 Top 10
+    topBooks.value = booksRes.data.map((b: TopBorrowedBook, index: number) => ({
+      rank: index + 1,
+      bookId: b.bookId,
+      title: b.title,
+      author: b.author,
+      count: b.borrowCount
+    }))
     topBooksLoading.value = false
 
-    // 获取阅读之星 Top 5
-    const usersRes = await getTopBorrowers(5)
-    if (usersRes.code === '0' && usersRes.success) {
-      topUsers.value = usersRes.data.map((u: TopBorrower, index: number) => ({
-        rank: index + 1,
-        userId: u.userId,
-        name: u.username,
-        count: u.borrowCount
-      }))
-    }
+    // 更新阅读之星 Top 5
+    topUsers.value = usersRes.data.map((u: TopBorrower, index: number) => ({
+      rank: index + 1,
+      userId: u.userId,
+      name: u.username,
+      count: u.borrowCount
+    }))
     topUsersLoading.value = false
 
   } catch (error) {

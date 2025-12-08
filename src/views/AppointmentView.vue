@@ -81,9 +81,7 @@ const fetchData = async () => {
   try {
     // GET /reservation/list - 返回当前用户的所有预约记录
     const res = await getReservationList()
-    if (res.code === '0' && res.success) {
-      tableData.value = res.data
-    }
+    tableData.value = res.data
   } catch (error) {
     console.error(error)
     ElMessage.error('获取预约记录失败')

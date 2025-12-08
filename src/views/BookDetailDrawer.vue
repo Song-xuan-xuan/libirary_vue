@@ -141,15 +141,11 @@ const open = async (id: number) => {
   try {
     // 获取图书详情（RESTful 风格）
     const bookRes = await getBookDetail(id)
-    if (bookRes.code === '0' && bookRes.success) {
-      bookData.value = bookRes.data
-    }
+    bookData.value = bookRes.data
     
     // 获取评论列表
     const commentsRes = await getBookComments(id)
-    if (commentsRes.code === '0' && commentsRes.success) {
-      comments.value = commentsRes.data
-    }
+    comments.value = commentsRes.data
   } catch (error) {
     console.error(error)
     ElMessage.error('获取详情失败')
@@ -173,23 +169,17 @@ const submitComment = async () => {
 
   submitting.value = true
   try {
-    const res = await createComment({
+    await createComment({
       bookId: currentBookId.value,
       content
     })
     
-    if (res.code === '0' && res.success) {
-      ElMessage.success('评论发表成功')
-      commentContent.value = ''
-      
-      // 刷新评论列表
-      const commentsRes = await getBookComments(currentBookId.value)
-      if (commentsRes.code === '0' && commentsRes.success) {
-        comments.value = commentsRes.data
-      }
-    } else {
-      ElMessage.error(res.message || '评论发表失败')
-    }
+    ElMessage.success('评论发表成功')
+    commentContent.value = ''
+    
+    // 刷新评论列表
+    const commentsRes = await getBookComments(currentBookId.value)
+    comments.value = commentsRes.data
   } catch (error) {
     console.error(error)
     ElMessage.error('评论发表失败')

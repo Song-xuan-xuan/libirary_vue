@@ -4,6 +4,14 @@ import router from '@/router'
 import { useUserStore } from '@/stores/user'
 
 /**
+ * 判断 API 响应是否成功
+ * 兼容多种成功标识：success=true 或 code=0/'0'/200
+ */
+const isSuccess = (res: any): boolean => {
+  return res.success === true || res.code === '0' || res.code === 0 || res.code === 200
+}
+
+/**
  * Axios 实例配置
  * - baseURL 从环境变量读取
  * - 开发环境使用 /api（通过 Vite proxy 代理）
@@ -48,17 +56,19 @@ service.interceptors.request.use(
 
 /**
  * 响应拦截器
- * 根据《接口文档(1).md》重构：
- * - 判断 code === '0' 且 success === true 才视为成功
- * - 业务错误（success === false）优先显示 message
+ * 兼容多种成功标识：
+ * - success === true
+ * - code === 0 (数字)
+ * - code === '0' (字符串)
+ * - code === 200
  * - 401 自动清除用户状态并跳转登录
  */
 service.interceptors.response.use(
   (response) => {
     const res = response.data
     
-    // 根据接口文档：code === '0' 且 success === true 表示成功
-    if (res.code === '0' && res.success === true) {
+    // 使用宽泛的判断逻辑，兼容多种成功标识
+    if (isSuccess(res)) {
       // 成功：返回完整的 ApiResponse 结构
       return res
     } else {

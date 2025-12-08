@@ -28,7 +28,7 @@
         <el-table-column prop="title" label="书名" min-width="200" show-overflow-tooltip />
         <el-table-column prop="author" label="作者" min-width="120" show-overflow-tooltip />
         <el-table-column prop="description" label="简介" min-width="200" show-overflow-tooltip />
-        <el-table-column label="操作" width="260" fixed="right" align="center">
+        <el-table-column label="操作" width="300" fixed="right" align="center">
           <template #default="scope">
             <el-button link type="primary" size="small" @click="handleDetail(scope.row)">详情</el-button>
             
@@ -37,14 +37,26 @@
               <el-icon><Star /></el-icon>
             </el-button>
 
-            <!-- 借阅/预约按钮（注意：接口文档未返回stock字段，默认显示借阅） -->
+            <!-- 借阅按钮：有库存时显示 -->
             <el-button 
+              v-if="!scope.row.stock || scope.row.stock > 0"
               link 
               type="primary" 
               size="small" 
               @click="handleBorrow(scope.row)"
             >
               借阅
+            </el-button>
+
+            <!-- 预约按钮：库存为0时显示 -->
+            <el-button 
+              v-if="scope.row.stock === 0"
+              link 
+              type="warning" 
+              size="small" 
+              @click="handleReserve(scope.row)"
+            >
+              预约
             </el-button>
 
             <template v-if="isAdmin">
@@ -121,6 +133,7 @@ import { useUserStore } from '@/stores/user'
 import { getBooks, deleteBook, createBook, updateBook } from '@/api/book'
 import { borrowBook } from '@/api/borrow'
 import { addFavorite } from '@/api/favorite'
+import { reserveBook } from '@/api/reservation'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star } from '@element-plus/icons-vue'
 import BookDetailDrawer from '@/views/BookDetailDrawer.vue'
@@ -195,12 +208,8 @@ const fetchData = async () => {
       ...searchForm
     }
     const res = await getBooks(params) as ApiResponse<PaginatedData<Book>>
-    
-    // 根据新的响应结构判断
-    if (res.code === '0' && res.success) {
-      tableData.value = res.data.list      // 改为 list
-      total.value = res.data.total
-    }
+    tableData.value = res.data.list
+    total.value = res.data.total
   } catch (error) {
     console.error(error)
     ElMessage.error('获取图书列表失败')
@@ -271,23 +280,15 @@ const handleSubmit = async () => {
       }
       
       if (dialogType.value === 'add') {
-        const res = await createBook(apiParams) as ApiResponse
-        if (res.code === '0' && res.success) {
-          ElMessage.success('新增成功')
-          dialogVisible.value = false
-          fetchData()
-        } else {
-          ElMessage.error(res.message || '新增失败')
-        }
+        await createBook(apiParams)
+        ElMessage.success('新增成功')
+        dialogVisible.value = false
+        fetchData()
       } else {
-        const res = await updateBook({ id: editingBookId.value!, ...apiParams }) as ApiResponse
-        if (res.code === '0' && res.success) {
-          ElMessage.success('更新成功')
-          dialogVisible.value = false
-          fetchData()
-        } else {
-          ElMessage.error(res.message || '更新失败')
-        }
+        await updateBook({ id: editingBookId.value!, ...apiParams })
+        ElMessage.success('更新成功')
+        dialogVisible.value = false
+        fetchData()
       }
     } catch (error) {
       console.error(error)
@@ -316,11 +317,9 @@ const handleBorrow = (row: Book) => {
   )
     .then(async () => {
       try {
-        const res = await borrowBook({ bookId: row.id }) as ApiResponse
-        if (res.code === '0' && res.success) {
-          ElMessage.success('借阅成功')
-          fetchData()
-        }
+        await borrowBook({ bookId: row.id })
+        ElMessage.success('借阅成功')
+        fetchData()
       } catch (error) {
         console.error(error)
         ElMessage.error('借阅失败')
@@ -331,14 +330,34 @@ const handleBorrow = (row: Book) => {
 
 const handleFavorite = async (row: Book) => {
   try {
-    const res = await addFavorite({ bookId: row.id }) as ApiResponse
-    if (res.code === '0' && res.success) {
-      ElMessage.success('收藏成功')
-    }
+    await addFavorite({ bookId: row.id })
+    ElMessage.success('添加收藏成功')
   } catch (error) {
     console.error(error)
     ElMessage.error('收藏失败')
   }
+}
+
+const handleReserve = (row: Book) => {
+  ElMessageBox.confirm(
+    `图书 "${row.title}" 当前库存为0，确定要预约吗？`,
+    '预约图书',
+    {
+      confirmButtonText: '确定预约',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(async () => {
+      try {
+        await reserveBook({ bookId: row.id })
+        ElMessage.success('预约成功，请前往“预约管理”页面查看')
+      } catch (error) {
+        console.error(error)
+        ElMessage.error('预约失败')
+      }
+    })
+    .catch(() => {})
 }
 
 const handleDelete = (row: Book) => {
@@ -353,11 +372,9 @@ const handleDelete = (row: Book) => {
   )
     .then(async () => {
       try {
-        const res = await deleteBook(row.id) as ApiResponse
-        if (res.code === '0' && res.success) {
-          ElMessage.success('删除成功')
-          fetchData()
-        }
+        await deleteBook(row.id)
+        ElMessage.success('删除成功')
+        fetchData()
       } catch (error) {
         console.error(error)
         ElMessage.error('删除失败')
