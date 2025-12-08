@@ -278,7 +278,7 @@ const fetchData = async () => {
     // 后端返回格式：{ result: { data: { list: [...], total: 10 } } }
     if (res?.data) {
       const data = res.data
-      tableData.value = data.list || []
+      tableData.value = data.result?.data?.list || []
       total.value = data.total || 0
     } else {
       // 数据不存在，清空
