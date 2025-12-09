@@ -5,31 +5,13 @@
         <div class="card-header">
           <span>我的预约记录</span>
           <div class="header-actions">
-            <el-button type="primary" text @click="fetchData" :loading="loading">
-              <el-icon><Refresh /></el-icon>
-              刷新
-            </el-button>
           </div>
         </div>
       </template>
 
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
-        <el-table-column label="封面" width="80" align="center">
-          <template #default="scope">
-            <el-image 
-              v-if="scope.row.bookCover" 
-              :src="scope.row.bookCover" 
-              fit="cover" 
-              style="width: 50px; height: 70px; border-radius: 4px;"
-              :preview-src-list="[scope.row.bookCover]"
-            />
-            <span v-else style="color: #ccc;">无</span>
-          </template>
-        </el-table-column>
         <el-table-column prop="bookTitle" label="书名" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="bookAuthor" label="作者" width="120" align="center" show-overflow-tooltip />
-        <el-table-column prop="userName" label="预约人" width="100" align="center" />
-        <el-table-column prop="createTime" label="预约时间" width="180" align="center" />
+        <el-table-column prop="createdAt" label="预约时间" width="180" align="center" />
         <el-table-column prop="status" label="状态" width="120" align="center">
           <template #default="scope">
             <el-tag :type="getStatusType(scope.row.status)">
@@ -37,22 +19,25 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" align="center" fixed="right">
+        <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="scope">
+            <el-button link type="primary" size="small" @click="handleDetail(scope.row.bookId)">查看详情</el-button>
             <el-button
               v-if="scope.row.status === 0"
-              type="danger"
               link
+              type="danger"
               size="small"
               @click="handleCancel(scope.row)"
             >
               取消预约
             </el-button>
-            <span v-else style="color: #909399; font-size: 13px;">-</span>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- 详情抽屉 -->
+    <BookDetailDrawer ref="detailDrawerRef" />
   </div>
 </template>
 
@@ -61,10 +46,11 @@ import { ref, onMounted } from 'vue'
 import { getReservationList, cancelReservation } from '@/api/reservation'
 import type { ReservationRecord } from '@/api/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+import BookDetailDrawer from '@/views/BookDetailDrawer.vue'
 
 const loading = ref(false)
 const tableData = ref<ReservationRecord[]>([])
+const detailDrawerRef = ref()
 
 /**
  * 预约状态映射 (status: 0=等待中, 1=已取消, 2=已满足)
@@ -109,6 +95,12 @@ const fetchData = async () => {
     ElMessage.error('获取预约记录失败')
   } finally {
     loading.value = false
+  }
+}
+
+const handleDetail = (bookId: number) => {
+  if (detailDrawerRef.value) {
+    detailDrawerRef.value.open(bookId)
   }
 }
 

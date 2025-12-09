@@ -39,10 +39,6 @@
                 <el-icon><Phone /></el-icon>
                 {{ userStore.userInfo?.phone || '未填写' }}
               </el-descriptions-item>
-              <el-descriptions-item label="注册时间">
-                <el-icon><Calendar /></el-icon>
-                {{ formatDate(userStore.userInfo?.createAt) }}
-              </el-descriptions-item>
             </el-descriptions>
           </div>
         </el-card>

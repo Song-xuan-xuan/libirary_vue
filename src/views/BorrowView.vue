@@ -5,17 +5,13 @@
         <div class="card-header">
           <span>我的借阅记录</span>
           <div class="header-actions">
-            <el-button type="primary" text @click="fetchData" :loading="loading">
-              <el-icon><Refresh /></el-icon>
-              刷新
-            </el-button>
           </div>
         </div>
       </template>
       
       <el-table :data="tableData" style="width: 100%" v-loading="loading" border stripe>
         <el-table-column prop="bookTitle" label="书名" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="bookAuthor" label="作者" width="120" align="center" show-overflow-tooltip />
+      
         <el-table-column prop="borrowTime" label="借出时间" width="180" align="center" />
         <el-table-column prop="dueTime" label="应还时间" width="180" align="center" />
         <el-table-column prop="returnTime" label="归还时间" width="180" align="center">

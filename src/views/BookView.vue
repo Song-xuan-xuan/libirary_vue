@@ -9,6 +9,12 @@
         <el-form-item label="作者">
           <el-input v-model="searchForm.author" placeholder="请输入作者" clearable style="width: 200px" />
         </el-form-item>
+        <el-form-item label="ISBN">
+          <el-input v-model="searchForm.isbn" placeholder="请输入ISBN" clearable style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="标签">
+          <el-input v-model="searchForm.tagName" placeholder="请输入标签" clearable style="width: 200px" />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
@@ -24,10 +30,21 @@
     <!-- 数据展示区 -->
     <el-card class="table-card">
       <el-table :data="tableData" v-loading="loading" border stripe>
-        <el-table-column prop="id" label="ID" width="80" align="center" />
-        <el-table-column prop="title" label="书名" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="author" label="作者" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="description" label="简介" min-width="200" show-overflow-tooltip />
+        <el-table-column label="封面" width="80" align="center">
+          <template #default="scope">
+            <el-image 
+              v-if="scope.row.coverUrl" 
+              :src="scope.row.coverUrl" 
+              fit="cover" 
+              style="width: 50px; height: 70px; border-radius: 4px;"
+              :preview-src-list="[scope.row.coverUrl]"
+            />
+            <span v-else style="color: #ccc;">无</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="title" label="书名" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="author" label="作者" min-width="100" show-overflow-tooltip />
+        <el-table-column prop="isbn" label="ISBN" width="140" align="center" show-overflow-tooltip />
         <el-table-column label="库存" width="100" align="center">
           <template #default="scope">
             <el-tag v-if="getStock(scope.row) > 0" type="success" size="small">
@@ -171,7 +188,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import type { ApiResponse, PaginatedData } from '@/api/types'
 import { useUserStore } from '@/stores/user'
 import { getBooks, deleteBook, createBook, updateBook } from '@/api/book'
 import { borrowBook } from '@/api/borrow'
@@ -219,12 +235,15 @@ const getStock = (book: Book): number => {
   return 1
 }
 
+
+
 // 搜索表单
 const searchForm = reactive({
   title: '',
-  author: ''
+  author: '',
+  isbn: '',
+  tagName: ''
 })
-
 // 表格数据
 const loading = ref(false)
 const tableData = ref<Book[]>([])
@@ -327,6 +346,8 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.title = ''
   searchForm.author = ''
+  searchForm.isbn = ''
+  searchForm.tagName = ''
   handleSearch()
 }
 
