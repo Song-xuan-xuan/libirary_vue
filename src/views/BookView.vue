@@ -310,7 +310,7 @@ const fetchData = async () => {
   loading.value = true
   try {
     const params = {
-      offset: currentPage.value-1,
+      offset: (currentPage.value-1) * pageSize.value,
       limit: pageSize.value,
       ...searchForm
     }
