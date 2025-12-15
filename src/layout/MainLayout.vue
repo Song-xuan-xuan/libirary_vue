@@ -26,6 +26,10 @@
           <el-icon><Star /></el-icon>
           <span>图书收藏</span>
         </el-menu-item>
+        <el-menu-item index="/library/assistant">
+          <el-icon><Service /></el-icon>
+          <span>AI助手</span>
+        </el-menu-item>
         <el-menu-item index="/library/personal">
           <el-icon><User /></el-icon>
           <span>个人信息</span>
@@ -94,7 +98,7 @@ const handleCommand = async (command: string) => {
         cancelButtonText: '取消',
         type: 'warning'
       })
-      
+
       await userStore.logout()
       ElMessage.success('已退出登录')
       router.push('/login')

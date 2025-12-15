@@ -32,7 +32,7 @@ const isSuccess = (res: any): boolean => {
  */
 const service = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -54,11 +54,11 @@ service.interceptors.request.use(
       // Store 未初始化时从 localStorage 读取
       token = localStorage.getItem('token') || ''
     }
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    
+
     return config
   },
   (error) => {
@@ -79,7 +79,7 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   (response) => {
     const res = response.data
-    
+
     // 使用宽泛的判断逻辑，兼容多种成功标识
     if (isSuccess(res)) {
       // 成功：返回完整的 ApiResponse 结构
@@ -96,10 +96,10 @@ service.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       const res = error.response.data
-      
+
       // 优先使用后端返回的 message
       const message = res?.message || '请求失败'
-      
+
       switch (status) {
         case 401:
           // 未授权：清除用户状态并跳转登录
@@ -133,7 +133,7 @@ service.interceptors.response.use(
       // 其他错误
       ElMessage.error('请求配置错误')
     }
-    
+
     return Promise.reject(error)
   }
 )

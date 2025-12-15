@@ -76,6 +76,12 @@ const router = createRouter({
           name: 'personal',
           component: () => import('../views/PersonalView.vue'),
           meta: { title: '个人信息', roles: ['admin', 'student'] }
+        },
+        {
+          path: 'assistant',
+          name: 'assistant',
+          component: () => import('../views/AI.vue'),
+          meta: { title: 'AI助手', roles: ['admin', 'student'] }
         }
       ]
     },
@@ -97,12 +103,12 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   const token = userStore.token || localStorage.getItem('token')
-  
+
   // 设置页面标题
   if (to.meta.title) {
     document.title = `${to.meta.title} - 图书馆管理系统`
   }
-  
+
   // 不需要登录的页面直接放行
   if (!to.matched.some(record => record.meta.requiresAuth)) {
     // 已登录用户访问登录页，重定向到首页
@@ -113,70 +119,70 @@ router.beforeEach(async (to, from, next) => {
     next()
     return
   }
-  
+
   // ===== 需要登录的页面 =====
-  
+
   // 1. 检查是否有 Token
   if (!token) {
     console.warn('未登录，重定向到登录页')
-    next({ 
-      path: '/login', 
-      query: { redirect: to.fullPath } 
+    next({
+      path: '/login',
+      query: { redirect: to.fullPath }
     })
     return
   }
-  
+
   // 2. 有 Token 但 Store 未初始化，尝试获取用户信息
   if (!userStore.isInitialized) {
     const isValid = await userStore.initUserState()
-    
+
     if (!isValid) {
       console.warn('Token 无效或已过期，需要重新登录')
-      next({ 
-        path: '/login', 
-        query: { redirect: to.fullPath, expired: '1' } 
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath, expired: '1' }
       })
       return
     }
   }
-  
+
   // 3. 有 Token 但无 UserInfo（可能是刷新页面后 localStorage 被清理）
   if (!userStore.userInfo) {
     console.warn('用户信息不存在，尝试通过 Token 获取')
-    
+
     // 强制重新初始化
     userStore.isInitialized = false
     const isValid = await userStore.initUserState()
-    
+
     if (!isValid) {
       console.warn('获取用户信息失败，需要重新登录')
       userStore.clearUserData()
-      next({ 
-        path: '/login', 
-        query: { redirect: to.fullPath } 
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath }
       })
       return
     }
   }
-  
+
   // 4. 检查角色权限
   const allowedRoles = to.meta.roles
   if (allowedRoles && allowedRoles.length > 0) {
     const userRole = userStore.role
-    
+
     if (!userRole) {
       console.warn('用户角色未定义')
       next({ path: '/403' })
       return
     }
-    
+
     if (!allowedRoles.includes(userRole as UserRole)) {
       console.warn(`用户角色 [${userRole}] 无权访问该页面，需要角色: [${allowedRoles.join(', ')}]`)
       next({ path: '/403' })
       return
     }
   }
-  
+
   // 所有检查通过，放行
   next()
 })
